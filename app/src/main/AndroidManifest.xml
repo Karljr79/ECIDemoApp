@@ -18,14 +18,6 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
-        <!--<activity-->
-            <!--android:name=".activity.CodeActivity"-->
-            <!--android:label="@string/title_activity_code" >-->
-        <!--</activity>-->
-        <activity
-            android:name=".activity.OAuthLoginActivity"
-            android:label="@string/title_activity_oauth_login" >
-        </activity>
         <activity
             android:name=".activity.SaleScreenActivity"
             android:label="@string/title_activity_sale_screen" >
