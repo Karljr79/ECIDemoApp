@@ -1,32 +1,54 @@
 package karlh.ecidemoapp.activity;
 
 import android.app.Activity;
+import android.os.AsyncTask;
 import android.os.Bundle;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
 import android.widget.Button;
 import android.widget.TextView;
+import android.util.Log;
+
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.Random;
+import java.util.Map;
+
+import com.paypal.core.rest.OAuthTokenCredential;
+
+import karlh.ecidemoapp.utils.RestClient;
 
 import karlh.ecidemoapp.utils.CommonUtils;
-
 import karlh.ecidemoapp.R;
 
 public class SaleScreenActivity extends Activity {
 
     private String mLocationId, mCustomerId, mTabId;
-    private Double mLoyaltyAmount, mTipAmount, mSubTotal, mLoyaltyDiscount, mLoyaltyModifier;
+    private Double mLoyaltyAmount, mTipAmount, mSubTotal, mLoyaltyDiscount, mLoyaltyRemainder;
     private TextView txtCustID, txtLoyaltyMember, txtLoyaltyBalance, txtSubTotal, txtTipAmount, txtGrandTotal, txtLoyaltyDiscount;
     private Button btnApplyLoyalty, btnCharge;
     private boolean mIsLoyaltyMember;
+    private getAccessTokenClass gat;
+    private createInvoiceClass cr;
+
+    private static final String mClientID = "AdjgOBAs-DM-nU3wsoKzFZvq2W8Vc_-RT0aCOeKEvHAJWnGk66giE6rKDZiN";
+    private static final String mSecret = "ECEt3xDGDlZ8zixnT5PD9jwIirSjKh0lmRZx1ocMfmB4PZ19WDxBhFHHUF2w";
+    private String mAccessToken;
+    private String mURLInvoice = "https://www.paypal.com/webapps/hereapi/merchant/v1/invoices";
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_sale_screen);
         mLoyaltyDiscount = 0.00;
-        mLoyaltyModifier = 10.00;
+
+        gat = new getAccessTokenClass();
+        gat.execute();
+
+        cr = new createInvoiceClass();
+        cr.execute();
+
 
         //grab data from intent
         mLocationId = getIntent().getStringExtra("locationId");
@@ -53,6 +75,7 @@ public class SaleScreenActivity extends Activity {
         txtCustID.setText(mCustomerId, TextView.BufferType.NORMAL);
         txtLoyaltyBalance.setText(mLoyaltyAmount.toString(), TextView.BufferType.NORMAL);
 
+        //does the customer have a balance to spend?
         if(mLoyaltyAmount > 0.00)
         {
             txtLoyaltyMember.setText("Yes", TextView.BufferType.NORMAL);
@@ -78,15 +101,26 @@ public class SaleScreenActivity extends Activity {
             public void onClick(View v) {
 
                 //if not a loyalty member
-                if(!mIsLoyaltyMember)
+                if(!mIsLoyaltyMember || mLoyaltyAmount == 0)
                 {
-                    CommonUtils.createToastMessage(SaleScreenActivity.this, "This client has no loyalty points to apply!");
+                    CommonUtils.createToastMessage(SaleScreenActivity.this, "This client is not a member or has no loyalty points to apply!");
                 }
                 else
                 {
-                    mLoyaltyDiscount = mLoyaltyAmount * mLoyaltyModifier;
+                    mLoyaltyDiscount = mLoyaltyAmount;
 
-                    txtLoyaltyDiscount.setText(roundNumberForDisplay(mLoyaltyDiscount), TextView.BufferType.NORMAL);
+                    //is the discount greater than the actual bill?
+                    if (mLoyaltyAmount >= getTotal() - 1.00)
+                    {
+                        mLoyaltyRemainder = mLoyaltyDiscount - getTotal();
+                        mLoyaltyAmount = mLoyaltyRemainder;
+                        txtLoyaltyBalance.setText(roundNumberForDisplay(mLoyaltyRemainder), TextView.BufferType.NORMAL);
+                        txtLoyaltyDiscount.setText(roundNumberForDisplay(mLoyaltyDiscount), TextView.BufferType.NORMAL);
+                    }
+                    else
+                    {
+                        txtLoyaltyDiscount.setText(roundNumberForDisplay(mLoyaltyDiscount), TextView.BufferType.NORMAL);
+                    }
 
                     updateTotal();
                 }
@@ -130,11 +164,17 @@ public class SaleScreenActivity extends Activity {
 
     public void updateTotal()
     {
+        txtGrandTotal.setText(roundNumberForDisplay(getTotal()), TextView.BufferType.NORMAL);
+        txtLoyaltyBalance.setText(roundNumberForDisplay(mLoyaltyAmount), TextView.BufferType.NORMAL);
+    }
+
+    public Double getTotal()
+    {
         Double total;
 
         total = (mSubTotal + mTipAmount) - mLoyaltyDiscount;
 
-        txtGrandTotal.setText(roundNumberForDisplay(total), TextView.BufferType.NORMAL);
+        return total;
     }
 
     public String roundNumberForDisplay(Double number)
@@ -143,4 +183,48 @@ public class SaleScreenActivity extends Activity {
 
         return roundedNumber.toString();
     }
+
+    private class getAccessTokenClass extends AsyncTask<String, Void, ArrayList<String>>
+    {
+        @Override
+        protected ArrayList<String> doInBackground(String... urls)
+        {
+            try{
+                Map<String, String> sdkconfig = new HashMap<String, String>();
+                sdkconfig.put("mode", "live");
+
+                try {
+                    mAccessToken = new OAuthTokenCredential(mClientID, mSecret, sdkconfig).getAccessToken();
+                    Log.i("Access Token is: ", mAccessToken);
+                }
+                catch (Exception e){
+                    Log.i("Issue with PayPal Auth", "Problems!!!!");
+                    e.printStackTrace();
+                }
+            }
+            catch (Exception e){
+                Log.i("RESTCLIENT", "Did not work!!!!!!!!!!!!!!");
+            }
+            return null;
+        }
+
+    }
+
+    private class createInvoiceClass extends AsyncTask<String, Void, ArrayList<String>>
+    {
+        @Override
+        protected ArrayList<String> doInBackground(String... urls)
+        {
+            try{
+
+
+            }
+            catch (Exception e){
+                Log.e("Payment", "Did not work!!!!!!!!!!!!!!");
+            }
+            return null;
+        }
+    }
+
+
 }

@@ -19,7 +19,7 @@ import org.apache.http.impl.client.DefaultHttpClient;
 import org.apache.http.message.BasicNameValuePair;
 import org.apache.http.protocol.HTTP;
 
-public class RestClient {
+public class RestClient extends Thread {
 
     private ArrayList <NameValuePair> params;
     private ArrayList <NameValuePair> headers;
