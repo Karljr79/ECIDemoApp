@@ -168,16 +168,25 @@
         android:layout_alignParentBottom="true"
         android:layout_alignParentStart="true"
         android:enabled="true"
-        android:layout_toLeftOf="@+id/textView9" />
+        android:layout_alignEnd="@+id/textView8" />
 
     <Button
         style="?android:attr/buttonStyleSmall"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="@string/settle_label"
-        android:id="@+id/btnSettle"
-        android:layout_alignTop="@+id/btnApplyLoyalty"
-        android:layout_alignParentEnd="true"
+        android:text="@string/create_invoice"
+        android:id="@+id/btnCreateInvoice"
         android:enabled="true"
-        android:layout_toRightOf="@+id/textView9" />
+        android:layout_above="@+id/btnApplyLoyalty"
+        android:layout_centerHorizontal="true" />
+
+    <Button
+        style="?android:attr/buttonStyleSmall"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="@string/sale_button"
+        android:id="@+id/btnSale"
+        android:layout_alignBottom="@+id/btnApplyLoyalty"
+        android:layout_toRightOf="@+id/btnCreateInvoice"
+        android:layout_alignEnd="@+id/txtGrandTotal" />
 </RelativeLayout>

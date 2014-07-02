@@ -30,5 +30,8 @@
     <string name="grand_total_label">Total</string>
     <string name="apply_loyalty">Apply Loyalty</string>
     <string name="settle_label">Charge</string>
+    <string name="confirmation_message">Are you sure you would like to settle the transaction?</string>
+    <string name="create_invoice">Create Invoice</string>
+    <string name="sale_button">Payment</string>
 
 </resources>

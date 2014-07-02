@@ -36,7 +36,7 @@ import karlh.ecidemoapp.utils.CommonUtils;
 
 public class CodeActivity extends Activity {
 
-    private static final String LOG = "PayPalHere.CodeScreen";
+    private static final String LOG = "CODESCREEN";
     private String url = "https://secure416.websitewelcome.com/~cdwright/tests/getrecord.php?";
     private String mCode;
     private Button mConfirmButton;

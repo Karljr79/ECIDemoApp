@@ -15,19 +15,23 @@ import java.util.HashMap;
 import java.util.Random;
 import java.util.Map;
 
+import org.json.JSONObject;
+import org.json.JSONException;
+
 import com.paypal.core.rest.OAuthTokenCredential;
 
-import karlh.ecidemoapp.utils.RestClient;
+import karlh.ecidemoapp.utils.HttpClient;
 
 import karlh.ecidemoapp.utils.CommonUtils;
 import karlh.ecidemoapp.R;
 
 public class SaleScreenActivity extends Activity {
 
-    private String mLocationId, mCustomerId, mTabId;
+    private static final String LOG = "SALESCREEN";
+    private String mLocationId, mCustomerId, mTabId, mInvoiceID;
     private Double mLoyaltyAmount, mTipAmount, mSubTotal, mLoyaltyDiscount, mLoyaltyRemainder;
     private TextView txtCustID, txtLoyaltyMember, txtLoyaltyBalance, txtSubTotal, txtTipAmount, txtGrandTotal, txtLoyaltyDiscount;
-    private Button btnApplyLoyalty, btnCharge;
+    private Button btnApplyLoyalty, btnCreateInvoice, btnSale;
     private boolean mIsLoyaltyMember;
     private getAccessTokenClass gat;
     private createInvoiceClass cr;
@@ -36,6 +40,8 @@ public class SaleScreenActivity extends Activity {
     private static final String mSecret = "ECEt3xDGDlZ8zixnT5PD9jwIirSjKh0lmRZx1ocMfmB4PZ19WDxBhFHHUF2w";
     private String mAccessToken;
     private String mURLInvoice = "https://www.paypal.com/webapps/hereapi/merchant/v1/invoices";
+    private String mURLPayment = "https://www.paypal.com/webapps/hereapi/merchant/v1/pay";
+
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -46,11 +52,7 @@ public class SaleScreenActivity extends Activity {
         gat = new getAccessTokenClass();
         gat.execute();
 
-        cr = new createInvoiceClass();
-        cr.execute();
-
-
-        //grab data from intent
+        //grab data from intent and store it
         mLocationId = getIntent().getStringExtra("locationId");
         mCustomerId = getIntent().getStringExtra("customerId");
         mTabId = getIntent().getStringExtra("tabId");
@@ -69,7 +71,10 @@ public class SaleScreenActivity extends Activity {
 
         //connect buttons
         btnApplyLoyalty = (Button) findViewById(R.id.btnApplyLoyalty);
-        btnCharge = (Button) findViewById(R.id.btnSettle);
+        btnCreateInvoice = (Button) findViewById(R.id.btnCreateInvoice);
+        btnSale = (Button) findViewById(R.id.btnSale);
+        btnSale.setEnabled(false);
+
 
         //handle initial population of data
         txtCustID.setText(mCustomerId, TextView.BufferType.NORMAL);
@@ -110,9 +115,9 @@ public class SaleScreenActivity extends Activity {
                     mLoyaltyDiscount = mLoyaltyAmount;
 
                     //is the discount greater than the actual bill?
-                    if (mLoyaltyAmount >= getTotal() - 1.00)
+                    if (mLoyaltyAmount >= getTotal(false) - 1.00)
                     {
-                        mLoyaltyRemainder = mLoyaltyDiscount - getTotal();
+                        mLoyaltyRemainder = mLoyaltyDiscount - getTotal(false);
                         mLoyaltyAmount = mLoyaltyRemainder;
                         txtLoyaltyBalance.setText(roundNumberForDisplay(mLoyaltyRemainder), TextView.BufferType.NORMAL);
                         txtLoyaltyDiscount.setText(roundNumberForDisplay(mLoyaltyDiscount), TextView.BufferType.NORMAL);
@@ -125,6 +130,29 @@ public class SaleScreenActivity extends Activity {
                     updateTotal();
                 }
 
+            }
+        });
+
+        btnCreateInvoice.setOnClickListener(new View.OnClickListener(){
+            @Override
+            public void onClick(View v) {
+                cr = new createInvoiceClass();
+                cr.execute();
+            }
+        });
+
+        btnSale.setOnClickListener(new View.OnClickListener(){
+            @Override
+            public void onClick(View v) {
+                JSONObject payload = constructPaymentPayload(mTabId, mInvoiceID);
+
+                try {
+                    Log.i(LOG, payload.toString(2));
+                }
+                catch (JSONException e)
+                {
+                    e.printStackTrace();
+                }
             }
         });
 
@@ -152,8 +180,8 @@ public class SaleScreenActivity extends Activity {
 
     public Float getRandomNumber()
     {
-        float minX = 25.0f;
-        float maxX = 50.0f;
+        float minX = 3.0f;
+        float maxX = 5.0f;
 
         Random rand = new Random();
 
@@ -164,15 +192,23 @@ public class SaleScreenActivity extends Activity {
 
     public void updateTotal()
     {
-        txtGrandTotal.setText(roundNumberForDisplay(getTotal()), TextView.BufferType.NORMAL);
+        txtGrandTotal.setText(roundNumberForDisplay(getTotal(false)), TextView.BufferType.NORMAL);
         txtLoyaltyBalance.setText(roundNumberForDisplay(mLoyaltyAmount), TextView.BufferType.NORMAL);
     }
 
-    public Double getTotal()
+    public Double getTotal(boolean onlySubTotal)
     {
         Double total;
 
-        total = (mSubTotal + mTipAmount) - mLoyaltyDiscount;
+        if (onlySubTotal)
+        {
+            total = (mSubTotal + mTipAmount) - mLoyaltyDiscount;
+        }
+        else
+        {
+            total = mSubTotal - mLoyaltyDiscount;
+        }
+
 
         return total;
     }
@@ -182,6 +218,64 @@ public class SaleScreenActivity extends Activity {
         Double roundedNumber = (double)Math.round(number * 100) / 100;
 
         return roundedNumber.toString();
+    }
+
+    public JSONObject constructInvoicePayload(String tip, String total)
+    {
+        JSONObject objectParent = new JSONObject();
+
+        try
+        {
+            //objectParent = new JSONObject("{\"paymentType\":\"tab\",\"tabId\":\"" + tabId + "\",\"invoice\":{\"currencyCode\":\"CAD\",\"paymentTerms\":\"DueOnReceipt\",\"merchantInfo\":{\"businessName\":\"ECI Test Merchant\",\"address\":{\"country\":\"US\",\"state\":\"CA\",\"line1\":\"Address Not Specified\",\"city\":\"BostonSan Francisco\",\"postalCode\":\"94109\"}},\"items\":[{\"unitPrice\":\"" + total + "\",\"name\":\"Default Item\",\"quantity\":\"1\"}],\"gratuityAmount\":\"" + tip + ",\"merchantEmail\":\"karljr79@gmail.com\"}}");
+            objectParent = new JSONObject("{\"merchantEmail\":\"cowright@paypal.com\",\"merchantInfo\":{\"businessName\":\"Cory ECI Test App\",\"address\":{\"line1\":\"2141 N. 1st Street\",\"city\":\"San Jose\",\"state\":\"CA\",\"postalCode\":\"95131\",\"country\":\"US\"},\"phoneNumber\":\"\"},\"currencyCode\":\"USD\",\"items\":[{\"name\":\"Test Item\",\"quantity\":\"1\",\"unitPrice\":\"" + total + "\"}],\"gratuityAmount\":\"" + tip + "\",\"invoiceDate\":\"2014-07-02T19:28:04+01:00\",\"paymentTerms\":\"DueOnReceipt\"})");
+        }
+        catch (Exception ex)
+        {
+            Log.e(LOG, "Error creating JSON Invoice!!!!!!!");
+        }
+
+        try
+        {
+            String message = objectParent.toString();
+
+            Log.i("JSON Invoice Output", message);
+        }
+        catch(Exception e)
+        {
+            Log.e(LOG, "Error converting JSON to String!!!!!!!");
+        }
+
+        return objectParent;
+    }
+
+    public JSONObject constructPaymentPayload(String tabID, String invoice)
+    {
+        JSONObject objectParent = new JSONObject();
+
+        try
+        {
+            objectParent = new JSONObject();
+            objectParent.put("paymentType","tab");
+            objectParent.put("invoiceId", invoice);
+            objectParent.put("tabId", tabID);
+        }
+        catch (Exception ex)
+        {
+            Log.e(LOG, "Error creating JSON Payload!!!!!!!");
+        }
+
+        try
+        {
+            String message = objectParent.toString();
+
+            Log.i("JSON Invoice Output", message);
+        }
+        catch(Exception e)
+        {
+            Log.e(LOG, "Error converting JSON to String!!!!!!!");
+        }
+
+        return objectParent;
     }
 
     private class getAccessTokenClass extends AsyncTask<String, Void, ArrayList<String>>
@@ -203,7 +297,7 @@ public class SaleScreenActivity extends Activity {
                 }
             }
             catch (Exception e){
-                Log.i("RESTCLIENT", "Did not work!!!!!!!!!!!!!!");
+                Log.i("ACCESS", "Did not work!!!!!!!!!!!!!!");
             }
             return null;
         }
@@ -216,7 +310,55 @@ public class SaleScreenActivity extends Activity {
         protected ArrayList<String> doInBackground(String... urls)
         {
             try{
+                JSONObject jo = constructInvoicePayload(roundNumberForDisplay(mTipAmount), roundNumberForDisplay(getTotal(true)));
 
+                JSONObject jsonRec = HttpClient.SendHttpPost(mURLInvoice, jo, mAccessToken);
+
+                Log.i("RECEIVED", jsonRec.toString(2));
+
+                if (jsonRec.getString("status").equals("200") || jsonRec.getString("status").equals("201"))
+                {
+                    mInvoiceID = jsonRec.getString("invoiceID");
+                    CommonUtils.createToastMessage(SaleScreenActivity.this, "Invoice created!!!" + mInvoiceID);
+
+                    Log.i(LOG, "Invoice ID: " + mInvoiceID);
+
+                    btnSale.setEnabled(true);
+                }
+                else
+                {
+                    CommonUtils.createToastMessage(SaleScreenActivity.this, "Error" + jsonRec.getString("status"));
+                }
+            }
+            catch (Exception e){
+                Log.e(LOG, "Invoice Creation Did not Work!!!!!!!!!!!!!!");
+            }
+            return null;
+        }
+    }
+
+    private class makePaymentClass extends AsyncTask<String, Void, ArrayList<String>>
+    {
+        @Override
+        protected ArrayList<String> doInBackground(String... urls)
+        {
+            try{
+
+                if (mTabId != null && mInvoiceID != null)
+                {
+                    JSONObject jo = constructPaymentPayload(mTabId, mInvoiceID);
+
+                    JSONObject jsonRec = HttpClient.SendHttpPost(mURLPayment, jo, mAccessToken);
+
+                    Log.i("RECEIVED PAYMENT RESPONSE", jsonRec.toString(2));
+
+
+                }
+                else
+                {
+                    CommonUtils.createToastMessage(SaleScreenActivity.this, "There is no Invoice ID");
+                    return null;
+                }
 
             }
             catch (Exception e){
@@ -225,6 +367,5 @@ public class SaleScreenActivity extends Activity {
             return null;
         }
     }
-
 
 }
