@@ -206,7 +206,8 @@
         android:textAppearance="?android:attr/textAppearanceMedium"
         android:id="@+id/txtInvNumber"
         android:layout_alignTop="@+id/txtNewBalance"
-        android:layout_alignEnd="@+id/txtGrandTotal" />
+        android:layout_alignEnd="@+id/txtGrandTotal"
+        android:textSize="10sp" />
 
     <TextView
         android:layout_width="wrap_content"

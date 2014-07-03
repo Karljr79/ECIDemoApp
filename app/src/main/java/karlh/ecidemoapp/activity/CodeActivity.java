@@ -36,11 +36,11 @@ import karlh.ecidemoapp.utils.CommonUtils;
 
 public class CodeActivity extends Activity {
 
-    private static final String LOG = "CODESCREEN";
+    private static final String LOG = "CODE SCREEN";
     private String url = "https://secure416.websitewelcome.com/~cdwright/tests/getrecord.php?";
     private String mCode;
     private Button mConfirmButton;
-    private String mLocationID, mCustomerID, mTabId, mLocale_x, mCustCode;
+    private String mLocationID, mCustomerID, mTabId, mLocale_x, mShouldApplyLoyalty;
     private Double mLoyaltyAmount, mTipAmount;
 
     Thread myThread;
@@ -129,10 +129,6 @@ public class CodeActivity extends Activity {
 
             try
             {
-                ArrayList<NameValuePair> nameValuePairs = new ArrayList<NameValuePair>(2);
-                //nameValuePairs.add(new BasicNameValuePair("code", mCode));
-
-                //httppost.setEntity(new UrlEncodedFormEntity(nameValuePairs));
                 HttpResponse response = httpclient.execute(httppost);
 
                 HttpEntity entity = response.getEntity();
@@ -162,17 +158,18 @@ public class CodeActivity extends Activity {
                         mLocale_x = jobj.getString("locale_x");
                         mLoyaltyAmount = jobj.getDouble("loyaltyAmount");
                         mTipAmount = jobj.getDouble("tipAmount");
+                        mShouldApplyLoyalty = jobj.getString("applyLoyalty");
 
                         //head to the sale screen
                         goSaleScreen();
                     }
                     catch(JSONException e)
                     {
-                        Log.e("log_tag", "Error parsing data "+e.toString());
+                        Log.e(LOG, "Error parsing data "+e.toString());
                     }
                 }
                 catch(Exception e){
-                    Log.e("log_tag", "Error converting result "+e.toString());
+                    Log.e(LOG, "Error converting result "+e.toString());
                 }
 
             }
@@ -187,16 +184,19 @@ public class CodeActivity extends Activity {
 
     private void goSaleScreen()
     {
-        //pass the data from teh JSON to the next activity
+        //pass the data from the JSON to the next activity
         Intent intent = new Intent(CodeActivity.this, SaleScreenActivity.class);
         intent.putExtra("locationId", mLocationID);
         intent.putExtra("customerId", mCustomerID);
         intent.putExtra("tabId", mTabId);
         intent.putExtra("locale_x", mLocale_x);
         intent.putExtra("loyaltyAmount", mLoyaltyAmount);
+        intent.putExtra("applyLoyalty", mShouldApplyLoyalty);
         intent.putExtra("tipAmount", mTipAmount);
         intent.putExtra("code", mCode);
 
         startActivity(intent);
+
+        Log.i(LOG, "Headed to Sales Screen..............");
     }
 }

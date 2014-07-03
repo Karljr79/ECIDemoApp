@@ -26,6 +26,7 @@ import java.io.InputStreamReader;
 import java.util.ArrayList;
 
 import karlh.ecidemoapp.R;
+import karlh.ecidemoapp.utils.CommonUtils;
 
 public class PostSaleActivity extends Activity {
 
@@ -45,16 +46,15 @@ public class PostSaleActivity extends Activity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_post_sale);
 
+        //take care of parsing intent and connecting UI components
         handleNewIntent(getIntent());
         connectUI();
 
+        //attempt to update the server with paid status and updated loyalty balance
         up = new updateServerClass();
         up.execute();
 
-        if(!mTXNumber.isEmpty() && !mTotalPaid.isEmpty() && !mLoyaltyBalance.isEmpty())
-        {
-            updateDisplay();
-        }
+        updateDisplay();
 
         btnGoHome.setOnClickListener(new View.OnClickListener(){
             @Override
@@ -103,7 +103,6 @@ public class PostSaleActivity extends Activity {
         txtLoyaltyBalance = (TextView) findViewById(R.id.txtNewBalance);
         txtTXNumber = (TextView) findViewById(R.id.txtComTX);
         txtTotalPaid = (TextView) findViewById(R.id.txtComTotal);
-
         btnGoHome = (Button) findViewById(R.id.btnReturnHome);
     }
 
@@ -112,17 +111,12 @@ public class PostSaleActivity extends Activity {
         txtLoyaltyBalance.setText(mLoyaltyBalance, TextView.BufferType.NORMAL);
         txtTotalPaid.setText(mTotalPaid, TextView.BufferType.NORMAL);
         txtTXNumber.setText(mTXNumber, TextView.BufferType.NORMAL);
+
+        Log.i(LOG, "Updated Post Sale Display");
     }
+
     private class updateServerClass extends AsyncTask<String, Void, ArrayList<String>>
     {
-        String mCode = null;
-        boolean mFailed = false;
-
-        private void setFailed()
-        {
-            mFailed = true;
-        }
-
         @Override
         protected ArrayList<String> doInBackground(String... urls)
         {
@@ -160,20 +154,33 @@ public class PostSaleActivity extends Activity {
                     {
                         JSONObject jobj  = new JSONObject(result);
 
+                        String status = jobj.getString("status");
+
+
+                        if (status.equals("success"))
+                        {
+                            runOnUiThread(new Runnable() {
+                                @Override
+                                public void run() {
+                                    CommonUtils.createToastMessage(PostSaleActivity.this, "Successfully updated Loyalty Database");
+                                }
+                            });
+
+                        }
+
                     }
                     catch(JSONException e)
                     {
-                        Log.e(LOG, "Error parsing data " + e.toString());
+                        Log.e(LOG, "Error parsing data returned from database update " + e.toString());
                     }
                 }
                 catch(Exception e){
-                    Log.e(LOG, "Error converting result "+e.toString());
+                    Log.e(LOG, "Error converting result " + e.toString());
                 }
 
             }
             catch(Exception e)
             {
-                setFailed();
                 Log.e(LOG, e.getMessage());
             }
             return null;

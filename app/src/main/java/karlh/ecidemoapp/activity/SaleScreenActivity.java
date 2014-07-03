@@ -29,7 +29,7 @@ import karlh.ecidemoapp.R;
 public class SaleScreenActivity extends Activity {
 
     private static final String LOG = "SALESCREEN";
-    private String mLocationId, mCustomerId, mTabId, mInvoiceID, mTXNUmber, mCode;
+    private String mLocationId, mCustomerId, mTabId, mInvoiceID, mTXNUmber, mCode, mShouldApplyLoyalty;
     private Double mLoyaltyAmount, mTipAmount, mSubTotal, mLoyaltyDiscount, mLoyaltyRemainder;
     private TextView txtCustID, txtLoyaltyMember, txtLoyaltyBalance, txtSubTotal, txtTipAmount, txtGrandTotal, txtLoyaltyDiscount, txtInvoiceNumber, txtTXNUmber;
     private Button btnApplyLoyalty, btnCreateInvoice, btnSale;
@@ -38,6 +38,7 @@ public class SaleScreenActivity extends Activity {
     //Async Tasks
     private getAccessTokenClass gat;
     private createInvoiceClass cr;
+    private makePaymentClass mp;
 
     //PayPal related variables
     private static final String mClientID = "AdjgOBAs-DM-nU3wsoKzFZvq2W8Vc_-RT0aCOeKEvHAJWnGk66giE6rKDZiN";
@@ -73,36 +74,15 @@ public class SaleScreenActivity extends Activity {
             @Override
             public void onClick(View v) {
 
-                //if not a loyalty member
-                if(!mIsLoyaltyMember || mLoyaltyAmount == 0)
-                {
-                    CommonUtils.createToastMessage(SaleScreenActivity.this, "This client is not a member or has no loyalty points to apply!");
-                }
-                else
-                {
                     mLoyaltyDiscount = mLoyaltyAmount;
 
-                    //is the discount greater than the actual bill?
-                    if (mLoyaltyAmount >= getTotal(false) - 1.00)
-                    {
-                        mLoyaltyRemainder = mLoyaltyDiscount - getTotal(false);
-                        mLoyaltyAmount = mLoyaltyRemainder;
-                        txtLoyaltyBalance.setText(roundNumberForDisplay(mLoyaltyRemainder), TextView.BufferType.NORMAL);
-                        txtLoyaltyDiscount.setText(roundNumberForDisplay(mLoyaltyDiscount), TextView.BufferType.NORMAL);
-                    }
-                    else
-                    {
-                        mLoyaltyAmount = 0.00;
-                        mLoyaltyRemainder = 0.00;
-                        txtLoyaltyDiscount.setText(roundNumberForDisplay(mLoyaltyDiscount), TextView.BufferType.NORMAL);
-                        txtLoyaltyBalance.setText(roundNumberForDisplay(mLoyaltyAmount));
-                    }
+                    mLoyaltyRemainder = 0.00;
+                    mLoyaltyAmount = 0.00;
+                    txtLoyaltyBalance.setText(roundNumberForDisplay(mLoyaltyRemainder), TextView.BufferType.NORMAL);
+                    txtLoyaltyDiscount.setText(roundNumberForDisplay(mLoyaltyDiscount), TextView.BufferType.NORMAL);
 
                     updateTotal();
-                }
-
-            }
-        });
+        }});
 
         btnCreateInvoice.setOnClickListener(new View.OnClickListener(){
             @Override
@@ -119,6 +99,9 @@ public class SaleScreenActivity extends Activity {
 
                 try {
                     Log.i(LOG, payload.toString(2));
+                    mp = new makePaymentClass();
+                    mp.execute();
+
                 }
                 catch (JSONException e)
                 {
@@ -158,6 +141,7 @@ public class SaleScreenActivity extends Activity {
         mLoyaltyAmount = i.getDoubleExtra("loyaltyAmount", 0.00);
         mTipAmount = i.getDoubleExtra("tipAmount", 0.00);
         mCode = i.getStringExtra("code");
+        mShouldApplyLoyalty = i.getStringExtra("applyLoyalty");
         mSubTotal = getRandomNumber().doubleValue();
     }
 
@@ -200,6 +184,11 @@ public class SaleScreenActivity extends Activity {
             mIsLoyaltyMember = false;
         }
 
+        if(mShouldApplyLoyalty.equals("no"))
+        {
+            btnApplyLoyalty.setEnabled(false);
+        }
+
         //get a random number for the invoice
         txtSubTotal.setText(roundNumberForDisplay(mSubTotal), TextView.BufferType.NORMAL);
         txtLoyaltyDiscount.setText("0.00", TextView.BufferType.NORMAL);
@@ -213,8 +202,8 @@ public class SaleScreenActivity extends Activity {
 
     public Float getRandomNumber()
     {
-        float minX = 3.0f;
-        float maxX = 5.0f;
+        float minX = 5.0f;
+        float maxX = 6.0f;
 
         Random rand = new Random();
 
@@ -248,9 +237,15 @@ public class SaleScreenActivity extends Activity {
 
     public String roundNumberForDisplay(Double number)
     {
-        Double roundedNumber = (double)Math.round(number * 100) / 100;
+        Double mynum = 0.0;
+        if(number != 0) {
+            Double roundedNumber = (double) Math.round(number * 100) / 100;
 
-        return roundedNumber.toString();
+            return roundedNumber.toString();
+        }
+        else{
+            return mynum.toString();
+        }
     }
 
     private void goPostSaleScreen()
@@ -259,19 +254,19 @@ public class SaleScreenActivity extends Activity {
         Intent intent = new Intent(SaleScreenActivity.this, PostSaleActivity.class);
         intent.putExtra("TXNumber", mTXNUmber);
         intent.putExtra("Amount", roundNumberForDisplay(getTotal(false)));
-        intent.putExtra("LoyaltyBalance", mLoyaltyRemainder);
+        intent.putExtra("LoyaltyBalance", roundNumberForDisplay(mLoyaltyRemainder));
         intent.putExtra("Code", mCode);
 
         startActivity(intent);
     }
 
-    public JSONObject constructInvoicePayload(String tip, String total)
+    public JSONObject constructInvoicePayload(String tip, String total, String discount)
     {
         JSONObject objectParent = new JSONObject();
 
         try
         {
-            objectParent = new JSONObject("{\"merchantEmail\":\"cowright@paypal.com\",\"merchantInfo\":{\"businessName\":\"Cory ECI Test App\",\"address\":{\"line1\":\"2141 N. 1st Street\",\"city\":\"San Jose\",\"state\":\"CA\",\"postalCode\":\"95131\",\"country\":\"US\"},\"phoneNumber\":\"\"},\"currencyCode\":\"USD\",\"items\":[{\"name\":\"Test Item\",\"quantity\":\"1\",\"unitPrice\":\"" + total + "\"}],\"gratuityAmount\":\"" + tip + "\",\"invoiceDate\":\"2014-07-02T19:28:04+01:00\",\"paymentTerms\":\"DueOnReceipt\"})");
+            objectParent = new JSONObject("{\"merchantEmail\":\"cowright@paypal.com\",\"merchantInfo\":{\"businessName\":\"Cory ECI Test App\",\"address\":{\"line1\":\"2141 N. 1st Street\",\"city\":\"San Jose\",\"state\":\"CA\",\"postalCode\":\"95131\",\"country\":\"US\"},\"phoneNumber\":\"\"},\"currencyCode\":\"USD\",\"items\":[{\"name\":\"Test Item\",\"quantity\":\"1\",\"discountAmount\":\"" + discount + "\",\"unitPrice\":\"" + total + "\"}],\"gratuityAmount\":\"" + tip + "\",\"invoiceDate\":\"2014-07-02T19:28:04+01:00\",\"paymentTerms\":\"DueOnReceipt\"})");
         }
         catch (Exception ex)
         {
@@ -354,7 +349,7 @@ public class SaleScreenActivity extends Activity {
         protected ArrayList<String> doInBackground(String... urls)
         {
             try{
-                JSONObject jo = constructInvoicePayload(roundNumberForDisplay(mTipAmount), roundNumberForDisplay(getTotal(true)));
+                JSONObject jo = constructInvoicePayload(roundNumberForDisplay(mTipAmount), roundNumberForDisplay(mSubTotal), roundNumberForDisplay(mLoyaltyDiscount));
 
                 JSONObject jsonRec = HttpClient.SendHttpPost(mURLInvoice, jo, mAccessToken);
 
@@ -363,15 +358,22 @@ public class SaleScreenActivity extends Activity {
                 if (jsonRec.getString("status").equals("200") || jsonRec.getString("status").equals("201"))
                 {
                     mInvoiceID = jsonRec.getString("invoiceID");
-                    CommonUtils.createToastMessage(SaleScreenActivity.this, "Invoice created!!!" + mInvoiceID);
 
                     Log.i(LOG, "Invoice ID: " + mInvoiceID);
 
-                    txtInvoiceNumber.setText(mInvoiceID, TextView.BufferType.NORMAL);
+                    runOnUiThread(new Runnable() {
+                        @Override
+                        public void run() {
+                            CommonUtils.createToastMessage(SaleScreenActivity.this, "Invoice created!!!" + mInvoiceID);
+                            txtInvoiceNumber.setText(mInvoiceID, TextView.BufferType.NORMAL);
+                            btnSale.setEnabled(true);
+                            btnCreateInvoice.setEnabled(false);
+                            btnApplyLoyalty.setEnabled(false);
+                        }
+                    });
 
-                    btnSale.setEnabled(true);
-                    btnCreateInvoice.setEnabled(false);
-                    btnApplyLoyalty.setEnabled(false);
+
+
                 }
                 else
                 {
@@ -403,11 +405,21 @@ public class SaleScreenActivity extends Activity {
                     if (jsonRec.getString("status").equals("200") || jsonRec.getString("status").equals("201"))
                     {
                         mTXNUmber = jsonRec.getString("transactionNumber");
-                        txtTXNUmber.setText(mTXNUmber, TextView.BufferType.NORMAL);
 
-                        CommonUtils.createToastMessage(SaleScreenActivity.this, "Transaction Complete" + mTXNUmber);
+                        runOnUiThread(new Runnable() {
+                            @Override
+                            public void run() {
 
-                        btnSale.setEnabled(false);
+                                txtTXNUmber.setText(mTXNUmber, TextView.BufferType.NORMAL);
+
+                                CommonUtils.createToastMessage(SaleScreenActivity.this, "Transaction Complete" + mTXNUmber);
+
+                                btnSale.setEnabled(false);
+
+                                goPostSaleScreen();
+                            }
+                        });
+
                     }
                     else
                     {
