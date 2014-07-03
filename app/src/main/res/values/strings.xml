@@ -33,5 +33,11 @@
     <string name="confirmation_message">Are you sure you would like to settle the transaction?</string>
     <string name="create_invoice">Create Invoice</string>
     <string name="sale_button">Payment</string>
+    <string name="invoice_number_label">Inv Number</string>
+    <string name="title_activity_post_sale">PostSaleActivity</string>
+    <string name="TX_complete_Title">Transaction Complete</string>
+    <string name="tx_label">TX Label</string>
+    <string name="new_loy_balance">New Balance</string>
+    <string name="btn_return_to_code">Return Home</string>
 
 </resources>

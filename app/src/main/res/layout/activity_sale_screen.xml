@@ -46,7 +46,7 @@
         android:textAppearance="?android:attr/textAppearanceMedium"
         android:text="Medium Text"
         android:id="@+id/txtSubTotal"
-        android:layout_alignTop="@+id/textView3"
+        android:layout_alignTop="@+id/txtComTX"
         android:layout_alignParentEnd="true" />
 
     <TextView
@@ -54,7 +54,7 @@
         android:layout_height="wrap_content"
         android:textAppearance="?android:attr/textAppearanceSmall"
         android:text="@string/total_label"
-        android:id="@+id/textView3"
+        android:id="@+id/txtComTX"
         android:layout_below="@+id/textView2"
         android:layout_alignParentStart="true"
         android:layout_marginTop="23dp" />
@@ -83,7 +83,7 @@
         android:layout_height="wrap_content"
         android:textAppearance="?android:attr/textAppearanceSmall"
         android:text="@string/loyalty_label"
-        android:id="@+id/textView5"
+        android:id="@+id/txtComTotal"
         android:layout_below="@+id/textView"
         android:layout_alignParentStart="true"
         android:textSize="14sp" />
@@ -106,7 +106,7 @@
         android:text="@string/loyalty_balance_label"
         android:id="@+id/textView6"
         android:textSize="14sp"
-        android:layout_below="@+id/textView5"
+        android:layout_below="@+id/txtComTotal"
         android:layout_alignParentStart="true" />
 
     <TextView
@@ -177,7 +177,7 @@
         android:text="@string/create_invoice"
         android:id="@+id/btnCreateInvoice"
         android:enabled="true"
-        android:layout_above="@+id/btnApplyLoyalty"
+        android:layout_alignTop="@+id/btnApplyLoyalty"
         android:layout_centerHorizontal="true" />
 
     <Button
@@ -189,4 +189,40 @@
         android:layout_alignBottom="@+id/btnApplyLoyalty"
         android:layout_toRightOf="@+id/btnCreateInvoice"
         android:layout_alignEnd="@+id/txtGrandTotal" />
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:textAppearance="?android:attr/textAppearanceMedium"
+        android:text="@string/invoice_number_label"
+        android:id="@+id/txtNewBalance"
+        android:layout_below="@+id/textView9"
+        android:layout_alignParentStart="true"
+        android:layout_marginTop="36dp" />
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:textAppearance="?android:attr/textAppearanceMedium"
+        android:id="@+id/txtInvNumber"
+        android:layout_alignTop="@+id/txtNewBalance"
+        android:layout_alignEnd="@+id/txtGrandTotal" />
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:textAppearance="?android:attr/textAppearanceMedium"
+        android:text="TX Label"
+        android:id="@+id/textView10"
+        android:layout_below="@+id/txtNewBalance"
+        android:layout_alignParentStart="true" />
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:textAppearance="?android:attr/textAppearanceMedium"
+        android:id="@+id/txtTXNumber"
+        android:layout_below="@+id/txtInvNumber"
+        android:layout_alignParentEnd="true"
+        android:layout_alignStart="@+id/textView9" />
 </RelativeLayout>

@@ -195,6 +195,7 @@ public class CodeActivity extends Activity {
         intent.putExtra("locale_x", mLocale_x);
         intent.putExtra("loyaltyAmount", mLoyaltyAmount);
         intent.putExtra("tipAmount", mTipAmount);
+        intent.putExtra("code", mCode);
 
         startActivity(intent);
     }
