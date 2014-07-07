@@ -1,6 +1,12 @@
+/*
+ECI Demo App
+Copyright Karl Hirschhorn, 2014
+ */
+
 package karlh.ecidemoapp.activity;
 
 import android.app.Activity;
+import android.app.ProgressDialog;
 import android.content.Context;
 import android.content.Intent;
 import android.os.AsyncTask;
@@ -12,17 +18,14 @@ import android.view.inputmethod.InputMethodManager;
 import android.widget.Button;
 import android.widget.EditText;
 import android.util.Log;
+import android.widget.TextView;
 
 import org.apache.http.HttpEntity;
 import org.apache.http.HttpResponse;
-import org.apache.http.NameValuePair;
 import org.apache.http.client.HttpClient;
-import org.apache.http.client.entity.UrlEncodedFormEntity;
 import org.apache.http.client.methods.HttpPost;
 import org.apache.http.impl.client.DefaultHttpClient;
-import org.apache.http.message.BasicNameValuePair;
 
-import org.json.JSONArray;
 import org.json.JSONObject;
 import org.json.JSONException;
 
@@ -36,28 +39,40 @@ import karlh.ecidemoapp.utils.CommonUtils;
 
 public class CodeActivity extends Activity {
 
+    //static variable
     private static final String LOG = "CODE SCREEN";
-    private String url = "https://secure416.websitewelcome.com/~cdwright/tests/getrecord.php?";
-    private String mCode;
-    private Button mConfirmButton;
-    private String mLocationID, mCustomerID, mTabId, mLocale_x, mShouldApplyLoyalty;
+
+    private String mURL = "https://secure416.websitewelcome.com/~cdwright/tests/getrecord.php?";
+    private String mCode, mLocationID, mCustomerID, mTabId, mLocale_x, mShouldApplyLoyalty;
     private Double mLoyaltyAmount, mTipAmount;
 
-    Thread myThread;
+    //UI variables
+    private Button mConfirmButton;
+    private EditText txtCode;
+    private ProgressDialog mSpinner;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_code);
 
+        txtCode = (EditText) findViewById(R.id.txtCode);
+
         //setup login button
         mConfirmButton = (Button) findViewById(R.id.btnSubmit);
+
+        //setup spinner
+        mSpinner = new ProgressDialog(CodeActivity.this);
+        mSpinner.setIndeterminate(false);
+        mSpinner.setCanceledOnTouchOutside(false);
+
         // setup register button's click listener
-        mConfirmButton.setOnClickListener(new View.OnClickListener() {
+        mConfirmButton.setOnClickListener(new View.OnClickListener()
+        {
             @Override
             public void onClick(View v)
             {
-                mCode = CommonUtils.getString((EditText) findViewById(R.id.txtCode));
+                mCode = CommonUtils.getString(txtCode);
 
                 if (mCode.length() == 4)
                 {
@@ -66,6 +81,10 @@ public class CodeActivity extends Activity {
                     asyncTask.execute();
 
                     hideKeyboard(v);
+
+                    // Show the progress dialog
+                    showProgressDialog();
+
                 }
                 else
                 {
@@ -97,12 +116,52 @@ public class CodeActivity extends Activity {
         return super.onOptionsItemSelected(item);
     }
 
+    /**
+     * Method to show the progress dialog with a suitable message.
+     */
+    private void showProgressDialog() {
+        mSpinner.setMessage("Checking Code...");
+        mSpinner.show();
+    }
+
+    /**
+     * Method to hide the progress dialog.
+     */
+    private void hideProgressDialog() {
+        if (mSpinner.isShowing())
+            mSpinner.dismiss();
+    }
+
     private void hideKeyboard(View v)
     {
         InputMethodManager imm = (InputMethodManager) getSystemService(Context.INPUT_METHOD_SERVICE);
         imm.hideSoftInputFromWindow(v.getWindowToken(), 0);
     }
 
+    //all is good, head to the sale screen
+    private void goSaleScreen()
+    {
+        //hide progress dialog
+        hideProgressDialog();
+
+        //pass the data from the JSON to the next activity
+        Intent intent = new Intent(CodeActivity.this, SaleScreenActivity.class);
+        intent.putExtra("locationId", mLocationID);
+        intent.putExtra("customerId", mCustomerID);
+        intent.putExtra("tabId", mTabId);
+        intent.putExtra("locale_x", mLocale_x);
+        intent.putExtra("loyaltyAmount", mLoyaltyAmount);
+        intent.putExtra("applyLoyalty", mShouldApplyLoyalty);
+        intent.putExtra("tipAmount", mTipAmount);
+        intent.putExtra("code", mCode);
+
+        startActivity(intent);
+
+        Log.i(LOG, "Headed to Sales Screen..............");
+    }
+
+
+    //Async task to check the entered code
     private class CheckCodeTask extends AsyncTask<String, Void, ArrayList<String>>
     {
         String mCode = null;
@@ -122,9 +181,9 @@ public class CodeActivity extends Activity {
         protected ArrayList<String> doInBackground(String... urls)
         {
             HttpClient httpclient = new DefaultHttpClient();
-            url += "code="+mCode;
+            mURL += "code="+mCode;
 
-            HttpPost httppost = new HttpPost(url);
+            HttpPost httppost = new HttpPost(mURL);
             String result = "";
 
             try
@@ -148,28 +207,50 @@ public class CodeActivity extends Activity {
 
                     result=sb.toString();
 
-                    //parse json data
-                    try
+                    //is there a JSON payload?
+                    if (!result.contains("null"))
                     {
-                        JSONObject jobj  = new JSONObject(result);
-                        mLocationID = jobj.getString("locationId");
-                        mCustomerID = jobj.getString("customerId");
-                        mTabId = jobj.getString("tabId");
-                        mLocale_x = jobj.getString("locale_x");
-                        mLoyaltyAmount = jobj.getDouble("loyaltyAmount");
-                        mTipAmount = jobj.getDouble("tipAmount");
-                        mShouldApplyLoyalty = jobj.getString("applyLoyalty");
+                        try
+                        {
+                            //parse json data
+                            JSONObject jobj = new JSONObject(result);
+                            mLocationID = jobj.getString("locationId");
+                            mCustomerID = jobj.getString("customerId");
+                            mTabId = jobj.getString("tabId");
+                            mLocale_x = jobj.getString("locale_x");
+                            mLoyaltyAmount = jobj.getDouble("loyaltyAmount");
+                            mTipAmount = jobj.getDouble("tipAmount");
+                            mShouldApplyLoyalty = jobj.getString("applyLoyalty");
 
-                        //head to the sale screen
-                        goSaleScreen();
+                            //head to the sale screen
+                            goSaleScreen();
+                        } catch (JSONException e)
+                        {
+                            Log.e(LOG, "Error parsing data " + e.toString());
+                        }
                     }
-                    catch(JSONException e)
+                    else
                     {
-                        Log.e(LOG, "Error parsing data "+e.toString());
+                        //display toast
+                        CommonUtils.createToastMessage(CodeActivity.this, "The code you entered is invalid, try again");
+
+
+                        runOnUiThread(new Runnable() {
+                            @Override
+                            public void run() {
+                                //set text view back to none
+                                txtCode.setText("");
+
+                                //hide progress dialog
+                                hideProgressDialog();
+                            }
+                        });
+
+
                     }
                 }
                 catch(Exception e){
-                    Log.e(LOG, "Error converting result "+e.toString());
+                    Log.e(LOG, "Error converting result " + e.toString());
                 }
 
             }
@@ -180,23 +261,5 @@ public class CodeActivity extends Activity {
             }
             return null;
         }
-    }
-
-    private void goSaleScreen()
-    {
-        //pass the data from the JSON to the next activity
-        Intent intent = new Intent(CodeActivity.this, SaleScreenActivity.class);
-        intent.putExtra("locationId", mLocationID);
-        intent.putExtra("customerId", mCustomerID);
-        intent.putExtra("tabId", mTabId);
-        intent.putExtra("locale_x", mLocale_x);
-        intent.putExtra("loyaltyAmount", mLoyaltyAmount);
-        intent.putExtra("applyLoyalty", mShouldApplyLoyalty);
-        intent.putExtra("tipAmount", mTipAmount);
-        intent.putExtra("code", mCode);
-
-        startActivity(intent);
-
-        Log.i(LOG, "Headed to Sales Screen..............");
     }
 }

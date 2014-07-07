@@ -1,6 +1,12 @@
+/*
+ECI Demo App
+Copyright Karl Hirschhorn, 2014
+ */
+
 package karlh.ecidemoapp.activity;
 
 import android.app.Activity;
+import android.app.ProgressDialog;
 import android.content.Intent;
 import android.os.AsyncTask;
 import android.os.Bundle;
@@ -28,12 +34,20 @@ import karlh.ecidemoapp.R;
 
 public class SaleScreenActivity extends Activity {
 
+    //static variables
     private static final String LOG = "SALESCREEN";
+    private static final String mClientID = "AdjgOBAs-DM-nU3wsoKzFZvq2W8Vc_-RT0aCOeKEvHAJWnGk66giE6rKDZiN";
+    private static final String mSecret = "ECEt3xDGDlZ8zixnT5PD9jwIirSjKh0lmRZx1ocMfmB4PZ19WDxBhFHHUF2w";
+
+
     private String mLocationId, mCustomerId, mTabId, mInvoiceID, mTXNUmber, mCode, mShouldApplyLoyalty;
     private Double mLoyaltyAmount, mTipAmount, mSubTotal, mLoyaltyDiscount, mLoyaltyRemainder;
+    private boolean mIsLoyaltyMember;
+
+    //UI Variables
     private TextView txtCustID, txtLoyaltyMember, txtLoyaltyBalance, txtSubTotal, txtTipAmount, txtGrandTotal, txtLoyaltyDiscount, txtInvoiceNumber, txtTXNUmber;
     private Button btnApplyLoyalty, btnCreateInvoice, btnSale;
-    private boolean mIsLoyaltyMember;
+    private ProgressDialog mSpinner;
 
     //Async Tasks
     private getAccessTokenClass gat;
@@ -41,8 +55,6 @@ public class SaleScreenActivity extends Activity {
     private makePaymentClass mp;
 
     //PayPal related variables
-    private static final String mClientID = "AdjgOBAs-DM-nU3wsoKzFZvq2W8Vc_-RT0aCOeKEvHAJWnGk66giE6rKDZiN";
-    private static final String mSecret = "ECEt3xDGDlZ8zixnT5PD9jwIirSjKh0lmRZx1ocMfmB4PZ19WDxBhFHHUF2w";
     private String mAccessToken;
     private String mURLInvoice = "https://www.paypal.com/webapps/hereapi/merchant/v1/invoices";
     private String mURLPayment = "https://www.paypal.com/webapps/hereapi/merchant/v1/pay";
@@ -98,6 +110,9 @@ public class SaleScreenActivity extends Activity {
                 JSONObject payload = constructPaymentPayload(mTabId, mInvoiceID);
 
                 try {
+                    //show spinner
+                    showProgressDialog();
+
                     Log.i(LOG, payload.toString(2));
                     mp = new makePaymentClass();
                     mp.execute();
@@ -158,6 +173,10 @@ public class SaleScreenActivity extends Activity {
         txtInvoiceNumber = (TextView) findViewById(R.id.txtInvNumber);
         txtTXNUmber = (TextView) findViewById(R.id.txtTXNumber);
 
+        //setup spinner
+        mSpinner = new ProgressDialog(SaleScreenActivity.this);
+        mSpinner.setIndeterminate(false);
+        mSpinner.setCanceledOnTouchOutside(false);
 
         //connect buttons
         btnApplyLoyalty = (Button) findViewById(R.id.btnApplyLoyalty);
@@ -198,6 +217,22 @@ public class SaleScreenActivity extends Activity {
 
         //update the total display
         updateTotal();
+    }
+
+    /**
+     * Method to show the progress dialog with a suitable message.
+     */
+    private void showProgressDialog() {
+        mSpinner.setMessage("Submitting Payment...");
+        mSpinner.show();
+    }
+
+    /**
+     * Method to hide the progress dialog.
+     */
+    private void hideProgressDialog() {
+        if (mSpinner.isShowing())
+            mSpinner.dismiss();
     }
 
     public Float getRandomNumber()
@@ -248,8 +283,12 @@ public class SaleScreenActivity extends Activity {
         }
     }
 
+    //All is good, head to post sale screen
     private void goPostSaleScreen()
     {
+        //hide spinner
+        hideProgressDialog();
+
         //pass the data from teh JSON to the next activity
         Intent intent = new Intent(SaleScreenActivity.this, PostSaleActivity.class);
         intent.putExtra("TXNumber", mTXNUmber);
@@ -260,6 +299,7 @@ public class SaleScreenActivity extends Activity {
         startActivity(intent);
     }
 
+    //create JSON payload for invoice
     public JSONObject constructInvoicePayload(String tip, String total, String discount)
     {
         JSONObject objectParent = new JSONObject();
@@ -287,6 +327,7 @@ public class SaleScreenActivity extends Activity {
         return objectParent;
     }
 
+    //create JSON payload for payment
     public JSONObject constructPaymentPayload(String tabID, String invoice)
     {
         JSONObject objectParent = new JSONObject();
@@ -317,6 +358,7 @@ public class SaleScreenActivity extends Activity {
         return objectParent;
     }
 
+    //handle getting an access token
     private class getAccessTokenClass extends AsyncTask<String, Void, ArrayList<String>>
     {
         @Override
@@ -377,11 +419,28 @@ public class SaleScreenActivity extends Activity {
                 }
                 else
                 {
+                    //show alert
                     CommonUtils.createToastMessage(SaleScreenActivity.this, "Error" + jsonRec.getString("status"));
+
+                    //hide spinner
+                    runOnUiThread(new Runnable() {
+                        @Override
+                        public void run() {
+                            hideProgressDialog();
+                        }
+                    });
                 }
             }
             catch (Exception e){
                 Log.e(LOG, "Invoice Creation Did not Work!!!!!!!!!!!!!!");
+
+                //hide spinner
+                runOnUiThread(new Runnable() {
+                    @Override
+                    public void run() {
+                        hideProgressDialog();
+                    }
+                });
             }
             return null;
         }

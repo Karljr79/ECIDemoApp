@@ -1,3 +1,8 @@
+/*
+ECI Demo App
+Copyright Karl Hirschhorn, 2014
+ */
+
 package karlh.ecidemoapp.activity;
 
 import android.app.Activity;
@@ -30,15 +35,18 @@ import karlh.ecidemoapp.utils.CommonUtils;
 
 public class PostSaleActivity extends Activity {
 
-    private String mLoyaltyBalance, mTXNumber, mTotalPaid, mCode;
-    private TextView txtLoyaltyBalance, txtTXNumber, txtTotalPaid;
-    private Button btnGoHome;
-
-    private updateServerClass up;
-
+    //static variables
     private final String LOG = "POST SALE SCREEN";
 
     private String url = "https://secure416.websitewelcome.com/~cdwright/tests/getrecord.php?";
+    private String mLoyaltyBalance, mTXNumber, mTotalPaid, mCode;
+
+    //UI variables
+    private TextView txtLoyaltyBalance, txtTXNumber, txtTotalPaid;
+    private Button btnGoHome;
+
+    //Async tasks variables
+    private updateServerClass up;
 
 
     @Override
